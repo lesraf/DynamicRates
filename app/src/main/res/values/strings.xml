@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">DynamicRates</string>
     <string name="rates_title">Rates</string>
+    <string name="rate_flag_content_description">Flag of country connected to currency</string>
+    <string name="rate_currency_amount_content_description">Currency amount</string>
 </resources>
