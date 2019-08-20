@@ -1,8 +1,9 @@
-package com.rl.dynamicrates
+package com.rl.dynamicrates.ui
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.rl.dynamicrates.R
 
 class RatesAdapter : RecyclerView.Adapter<RateViewHolder>() {
 

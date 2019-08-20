@@ -1,8 +1,9 @@
-package com.rl.dynamicrates
+package com.rl.dynamicrates.ui
 
+import com.rl.dynamicrates.R
 import java.util.*
 
-enum class CurrencyWithFlag(
+enum class CurrencyWithFlagModel(
     val flagRes: Int,
     val currency: Currency
 ) {
