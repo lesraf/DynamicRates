@@ -3,10 +3,11 @@ package com.rl.dynamicrates.ui
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.rl.dynamicrates.R
 import com.rl.dynamicrates.domain.GetRatesUseCase
-import com.rl.dynamicrates.sources.RetrofitDataSource
 import dagger.android.AndroidInjection
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
@@ -17,6 +18,9 @@ class RatesActivity : AppCompatActivity() {
 
     @Inject
     lateinit var useCase: GetRatesUseCase
+
+    @Inject
+    lateinit var viewModelFactory: ViewModelProvider.Factory
 
     private val viewAdapter = RatesAdapter()
 
@@ -43,5 +47,8 @@ class RatesActivity : AppCompatActivity() {
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe { success -> Log.d("RatesActivity", "success: $success"); }
+
+        val vm = ViewModelProviders.of(this, viewModelFactory)[RatesViewModel::class.java]
+        vm.hello()
     }
 }
