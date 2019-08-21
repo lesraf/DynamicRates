@@ -41,4 +41,14 @@ enum class CurrencyWithFlagModel(
     TRY(R.drawable.ic_turkey, Currency.getInstance("TRY")),
     USD(R.drawable.ic_united_states_of_america, Currency.getInstance("USD")),
     ZAR(R.drawable.ic_zambia, Currency.getInstance("ZAR"));
+
+    companion object {
+        fun fromString(currency: String): CurrencyWithFlagModel {
+            return try {
+                valueOf(currency)
+            } catch (iae: IllegalArgumentException) {
+                UNKNOWN
+            }
+        }
+    }
 }

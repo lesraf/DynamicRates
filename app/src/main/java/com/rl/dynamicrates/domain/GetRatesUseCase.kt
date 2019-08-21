@@ -5,7 +5,7 @@ import com.rl.dynamicrates.sources.RatesResponse
 import io.reactivex.Single
 import javax.inject.Inject
 
-class GetRatesUseCase @Inject constructor(val ratesApi: RatesApi) {
+class GetRatesUseCase @Inject constructor(private val ratesApi: RatesApi) {
     fun run(base: String): Single<RatesEntity> {
         return ratesApi.getRates(base)
             .map(RatesResponse::toEntity)
