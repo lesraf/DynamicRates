@@ -20,6 +20,7 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
 
     var chosenBase: RateModel = RateModel(CurrencyWithFlagModel.EUR, 100.0, true)
     var currentList: ArrayList<RateModel>? = null
+    var currentRatesEntity: RatesEntity? = null
 
     private val disposable: Disposable
 
@@ -29,14 +30,16 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
             .observeOn(Schedulers.io())
             .flatMapSingle { getRatesUseCase.run(chosenBase.currencyCode()) }
             .observeOn(Schedulers.computation())
-            .map { entities ->
+            .filter { entity -> entity.base == chosenBase.currencyCode() }
+            .map { entity ->
+                currentRatesEntity = entity
                 val list = ArrayList<RateModel>()
 
                 list.add(chosenBase)
                 return@map currentList?.let { currentList ->
-                    populateExistingList(currentList, entities, list)
+                    populateExistingList(currentList, entity, list)
                 } ?: run {
-                    populateNewList(entities, list)
+                    populateNewList(entity, list)
                 }
             }
             .subscribe(
@@ -46,6 +49,43 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
                 },
                 { throwable -> Timber.e(throwable) }
             )
+    }
+
+    fun ratesListLiveData(): LiveData<List<RateModel>> {
+        return _ratesListLiveData
+    }
+
+
+    fun onRateClick(rateModel: RateModel) {
+        synchronized(syncObject) {
+            if (!isBaseCurrency(rateModel)) {
+                currentList?.get(0)?.let { previousBase ->
+                    currentList?.remove(previousBase)
+                    currentList?.add(0, previousBase.copy(isBase = false))
+                }
+                currentList?.remove(rateModel)
+                chosenBase = rateModel.copy(isBase = true)
+                currentList?.add(0, chosenBase)
+                _ratesListLiveData.postValue(ArrayList(currentList))
+            }
+        }
+    }
+
+    fun onAmountChange(rateModel: RateModel) {
+        if (rateModel.currencyWithFlagModel == chosenBase.currencyWithFlagModel) {
+            chosenBase = chosenBase.copy(amount = rateModel.amount)
+
+            val list = ArrayList<RateModel>()
+
+            list.add(chosenBase)
+            currentRatesEntity?.let { ratesEntity ->
+                currentList?.let { currentModels ->
+                    populateExistingList(currentModels, ratesEntity, list)
+                }
+            }
+            currentList = list
+            _ratesListLiveData.postValue(currentList)
+        }
     }
 
     private fun populateNewList(
@@ -74,32 +114,6 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
         }
 
         return list
-    }
-
-    fun ratesListLiveData(): LiveData<List<RateModel>> {
-        return _ratesListLiveData
-    }
-
-
-    fun onRateClick(rateModel: RateModel) {
-        synchronized(syncObject) {
-            if (!isBaseCurrency(rateModel)) {
-                currentList?.get(0)?.let { previousBase ->
-                    currentList?.remove(previousBase)
-                    currentList?.add(0, previousBase.copy(isBase = false))
-                }
-                currentList?.remove(rateModel)
-                chosenBase = rateModel.copy(isBase = true)
-                currentList?.add(0, chosenBase)
-                _ratesListLiveData.postValue(ArrayList(currentList))
-            }
-        }
-    }
-
-    fun onAmountChange(amount: Double) {
-        chosenBase = chosenBase.copy(amount = amount)
-
-        // TODO recalculate amounts
     }
 
     private fun applyRate(rate: Double): Double {

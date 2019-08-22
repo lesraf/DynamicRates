@@ -4,9 +4,10 @@ import android.text.Editable
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.rate_view.view.*
+import java.text.DecimalFormat
 
 typealias OnRateClickListener = (RateModel) -> Unit
-typealias OnAmountChangeListener = (Double) -> Unit
+typealias OnAmountChangeListener = (RateModel) -> Unit
 
 class RateViewHolder(
     root: View,
@@ -15,6 +16,7 @@ class RateViewHolder(
 ) : RecyclerView.ViewHolder(root) {
 
     var textChangedWatcher: TextChangedWatcher? = null
+    var amountFormat = DecimalFormat("#.##")
 
     lateinit var rateModel: RateModel
 
@@ -25,7 +27,7 @@ class RateViewHolder(
     }
 
     fun updatePayload(payloadChange: PayloadChange) {
-        itemView.currencyAmount.setText(payloadChange.amount.toString())
+        populateAmount(payloadChange.amount)
         updateTextChangedWatcher(payloadChange.isBase)
         rateModel = rateModel.copy(amount = payloadChange.amount, isBase = payloadChange.isBase)
     }
@@ -36,7 +38,28 @@ class RateViewHolder(
             itemView.currencyAbbreviation.text = currency.currencyCode
             itemView.currencyDisplayName.text = currency.displayName
         }
-        itemView.currencyAmount.setText(rateModel.amount.toString())
+
+        populateAmount(rateModel.amount)
+    }
+
+    private fun populateAmount(amount: Double) {
+        val amountText = if (amount == 0.0) {
+            ""
+        } else {
+            amountFormat.format(amount)
+        }
+        if (rateModel.isBase) {
+            val selectionStart = itemView.currencyAmount.selectionStart
+            setAmount(amountText)
+            val newSelection = if (amountText.length < selectionStart) amountText.length else selectionStart
+            itemView.currencyAmount.setSelection(newSelection)
+        } else {
+            setAmount(amountText)
+        }
+    }
+
+    private fun setAmount(amount: String) {
+        itemView.currencyAmount.setText(amount)
     }
 
     private fun setListeners() {
@@ -61,7 +84,8 @@ class RateViewHolder(
         return object : TextChangedWatcher() {
             override fun afterTextChanged(editable: Editable?) {
                 editable?.let { changedText ->
-                    onAmountChangeListener(changedText.toString().toDoubleOrNull() ?: 0.0)
+                    rateModel = rateModel.copy(amount = changedText.toString().toDoubleOrNull() ?: 0.0)
+                    onAmountChangeListener(rateModel)
                 }
             }
         }
