@@ -14,12 +14,23 @@ class RateViewHolder(
     val onAmountChangeListener: OnAmountChangeListener
 ) : RecyclerView.ViewHolder(root) {
 
+    var textChangedWatcher: TextChangedWatcher? = null
+
+    lateinit var rateModel: RateModel
+
     fun update(rateModel: RateModel) {
-        populateViews(rateModel)
-        setListeners(rateModel)
+        this.rateModel = rateModel
+        populateViews()
+        setListeners()
     }
 
-    private fun populateViews(rateModel: RateModel) {
+    fun updatePayload(payloadChange: PayloadChange) {
+        itemView.currencyAmount.setText(payloadChange.amount.toString())
+        updateTextChangedWatcher(payloadChange.isBase)
+        rateModel = rateModel.copy(amount = payloadChange.amount, isBase = payloadChange.isBase)
+    }
+
+    private fun populateViews() {
         with(rateModel.currencyWithFlagModel) {
             itemView.currencyFlag.setImageResource(flagRes)
             itemView.currencyAbbreviation.text = currency.currencyCode
@@ -28,12 +39,22 @@ class RateViewHolder(
         itemView.currencyAmount.setText(rateModel.amount.toString())
     }
 
-    private fun setListeners(rateModel: RateModel) {
-        if (rateModel.isBase) {
-            itemView.currencyAmount.addTextChangedListener(prepareTextChangedWatcher())
+    private fun setListeners() {
+        updateTextChangedWatcher(rateModel.isBase)
+        itemView.setOnClickListener {
+            itemView.currencyAmount.requestFocus()
+            onRateClickListener(rateModel)
         }
-        itemView.setOnClickListener { onRateClickListener(rateModel) }
-//        itemView.currencyAmount.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onRateClickListener(rateModel) }
+        itemView.currencyAmount.setOnClickListener { onRateClickListener(rateModel) }
+    }
+
+    private fun updateTextChangedWatcher(isBase: Boolean) {
+        if (isBase) {
+            textChangedWatcher = prepareTextChangedWatcher()
+            itemView.currencyAmount.addTextChangedListener(textChangedWatcher)
+        } else {
+            textChangedWatcher?.let { itemView.currencyAmount.removeTextChangedListener(textChangedWatcher) }
+        }
     }
 
     private fun prepareTextChangedWatcher(): TextChangedWatcher {
@@ -46,8 +67,5 @@ class RateViewHolder(
         }
     }
 
-    fun updateAmount(finalAmount: Double) {
-        itemView.currencyAmount.setText(finalAmount.toString())
-    }
-
+    data class PayloadChange(val amount: Double, val isBase: Boolean)
 }

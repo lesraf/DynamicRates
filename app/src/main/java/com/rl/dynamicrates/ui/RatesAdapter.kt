@@ -27,9 +27,9 @@ class RatesAdapter(
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads)
         } else {
-            val finalAmount = payloads.last() as? Double
-            if (finalAmount != null) {
-                holder.updateAmount(finalAmount)
+            val change = payloads.last() as? RateViewHolder.PayloadChange
+            if (change != null) {
+                holder.updatePayload(change)
             } else {
                 super.onBindViewHolder(holder, position, payloads)
             }
