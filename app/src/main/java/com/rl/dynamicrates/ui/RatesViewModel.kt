@@ -3,6 +3,7 @@ package com.rl.dynamicrates.ui
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.rl.dynamicrates.common.Try
 import com.rl.dynamicrates.domain.GetRatesUseCase
 import com.rl.dynamicrates.domain.RatesEntity
 import io.reactivex.Observable
@@ -14,7 +15,11 @@ import javax.inject.Inject
 
 class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUseCase) : ViewModel() {
 
-    private val _ratesListLiveData = MutableLiveData<List<RateModel>>()
+    private val _ratesListData = MutableLiveData<List<RateModel>>()
+
+    private val _progressBarVisibility = MutableLiveData<Boolean>()
+
+    private val _errorSnackbarVisibility = MutableLiveData<Boolean>()
 
     private val syncObject = Any()
 
@@ -22,37 +27,81 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
     var currentList: ArrayList<RateModel>? = null
     var currentRatesEntity: RatesEntity? = null
 
-    private val disposable: Disposable
+    private var intervalDisposable: Disposable? = null
+    private var snackbarDisposable: Disposable? = null
 
     init {
-        disposable = Observable.interval(1, TimeUnit.SECONDS)
+        _progressBarVisibility.postValue(true)
+    }
+
+    fun ratesListData(): LiveData<List<RateModel>> {
+        return _ratesListData
+    }
+
+    fun progressBarVisibility(): LiveData<Boolean> {
+        return _progressBarVisibility
+    }
+
+    fun errorSnackbarVisibility(): LiveData<Boolean> {
+        return _errorSnackbarVisibility
+    }
+
+    fun onStart() {
+        startFetchingRates()
+    }
+
+    fun onStop() {
+        intervalDisposable?.dispose()
+    }
+
+    private fun startFetchingRates() {
+        intervalDisposable = Observable.interval(1, TimeUnit.SECONDS)
             .startWith(0)
             .observeOn(Schedulers.io())
             .flatMapSingle { getRatesUseCase.run(chosenBase.currencyCode()) }
             .observeOn(Schedulers.computation())
-            .filter { entity -> entity.base == chosenBase.currencyCode() }
-            .map { entity ->
-                currentRatesEntity = entity
-                val list = ArrayList<RateModel>()
-
-                list.add(chosenBase)
-                return@map currentList?.let { currentList ->
-                    populateExistingList(currentList, entity, list)
-                } ?: run {
-                    populateNewList(entity, list)
+            .filter { tryValue ->
+                when (tryValue) {
+                    is Try.Error -> true
+                    is Try.Success -> tryValue.success.base == chosenBase.currencyCode()
                 }
             }
+            .map { tryValue ->
+                when (tryValue) {
+                    is Try.Error -> tryValue
+                    is Try.Success -> {
+                        val entity = tryValue.success
+                        currentRatesEntity = entity
+                        val list = ArrayList<RateModel>()
+
+                        list.add(chosenBase)
+                        currentList?.let { currentList ->
+                            populateExistingList(currentList, entity, list)
+                        } ?: run {
+                            populateNewList(entity, list)
+                        }
+                        return@map Try.Success(list)
+                    }
+                }
+
+            }
             .subscribe(
-                { rateModels ->
-                    currentList = rateModels
-                    _ratesListLiveData.postValue(rateModels)
+                { tryValue ->
+                    when (tryValue) {
+                        is Try.Error -> {
+                            Timber.e(tryValue.throwable)
+                            showErrorSnackbar()
+                        }
+                        is Try.Success -> {
+                            val rateModels = tryValue.success
+                            currentList = rateModels
+                            _ratesListData.postValue(rateModels)
+                            _progressBarVisibility.postValue(false)
+                        }
+                    }
                 },
                 { throwable -> Timber.e(throwable) }
             )
-    }
-
-    fun ratesListLiveData(): LiveData<List<RateModel>> {
-        return _ratesListLiveData
     }
 
 
@@ -66,7 +115,7 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
                 currentList?.remove(rateModel)
                 chosenBase = rateModel.copy(isBase = true)
                 currentList?.add(0, chosenBase)
-                _ratesListLiveData.postValue(ArrayList(currentList))
+                _ratesListData.postValue(ArrayList(currentList))
             }
         }
     }
@@ -84,7 +133,7 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
                 }
             }
             currentList = list
-            _ratesListLiveData.postValue(currentList)
+            _ratesListData.postValue(currentList)
         }
     }
 
@@ -122,5 +171,18 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
 
     private fun isBaseCurrency(rateModel: RateModel): Boolean {
         return chosenBase.currencyWithFlagModel == rateModel.currencyWithFlagModel
+    }
+
+    private fun showErrorSnackbar() {
+        _errorSnackbarVisibility.postValue(true)
+        snackbarDisposable = Observable
+            .timer(1, TimeUnit.SECONDS)
+            .subscribe { _errorSnackbarVisibility.postValue(false) }
+    }
+
+    override fun onCleared() {
+        intervalDisposable?.dispose()
+        snackbarDisposable?.dispose()
+        super.onCleared()
     }
 }

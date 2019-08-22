@@ -4,4 +4,5 @@
     <string name="rate_flag_content_description">Flag of country connected to currency</string>
     <string name="rate_currency_amount_content_description">Currency amount</string>
     <string name="rate_hint">0</string>
+    <string name="error_could_not_fetch_rates">Could not fetch rates</string>
 </resources>
