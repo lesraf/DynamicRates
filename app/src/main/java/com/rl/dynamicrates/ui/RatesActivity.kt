@@ -29,15 +29,35 @@ class RatesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_rates)
 
-        viewModel = ViewModelProviders.of(this, viewModelFactory)[RatesViewModel::class.java]
+        setupViewModel()
+        setupRecyclerView()
+        setupLiveDatas()
+    }
 
+    override fun onStart() {
+        super.onStart()
+        viewModel.onStart()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        viewModel.onStop()
+    }
+
+    private fun setupViewModel() {
+        viewModel = ViewModelProviders.of(this, viewModelFactory)[RatesViewModel::class.java]
+    }
+
+    private fun setupRecyclerView() {
         ratesAdapter = RatesAdapter(prepareOnRateClickListener(), prepareOnAmountChangeListener())
 
         ratesList.apply {
             layoutManager = LinearLayoutManager(this@RatesActivity)
             adapter = ratesAdapter
         }
+    }
 
+    private fun setupLiveDatas() {
         viewModel.ratesListData()
             .observe(
                 this,
@@ -63,22 +83,11 @@ class RatesActivity : AppCompatActivity() {
             })
     }
 
-    override fun onStart() {
-        super.onStart()
-        viewModel.onStart()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        viewModel.onStop()
-    }
-
     private fun initSnackbarIfShould() {
         if (snackbar == null) {
             snackbar = Snackbar.make(container, R.string.error_could_not_fetch_rates, Snackbar.LENGTH_INDEFINITE)
         }
     }
-
 
     private fun prepareOnAmountChangeListener(): OnAmountChangeListener {
         return viewModel::onAmountChange

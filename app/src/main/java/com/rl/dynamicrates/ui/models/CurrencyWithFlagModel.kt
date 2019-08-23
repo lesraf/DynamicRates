@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.models
 
 import com.rl.dynamicrates.R
 import java.util.*

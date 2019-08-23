@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.rl.dynamicrates.R
+import com.rl.dynamicrates.ui.models.RateModel
 
 class RatesAdapter(
     private val onClickListener: OnRateClickListener,

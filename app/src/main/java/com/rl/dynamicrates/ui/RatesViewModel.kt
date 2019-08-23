@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import com.rl.dynamicrates.common.Try
 import com.rl.dynamicrates.domain.GetRatesUseCase
 import com.rl.dynamicrates.domain.RatesEntity
+import com.rl.dynamicrates.ui.models.CurrencyWithFlagModel
+import com.rl.dynamicrates.ui.models.RateModel
 import io.reactivex.Observable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -23,7 +25,11 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
 
     private var intervalDisposable: Disposable? = null
     private var snackbarDisposable: Disposable? = null
-    private var chosenBase: RateModel = RateModel(CurrencyWithFlagModel.EUR, initialAmount, true)
+    private var chosenBase: RateModel = RateModel(
+        CurrencyWithFlagModel.EUR,
+        initialAmount,
+        true
+    )
     private var currentList: ArrayList<RateModel>? = null
     private var currentRatesEntity: RatesEntity? = null
 
@@ -121,7 +127,9 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
         val listWithoutBase = ArrayList<RateModel>()
         for (currency in entities.rates.keys) {
             entities.rates[currency]?.let { rate ->
-                val rateModel = RateModel(CurrencyWithFlagModel.fromString(currency), applyRate(rate))
+                val rateModel = RateModel(
+                    CurrencyWithFlagModel.fromString(currency), applyRate(rate)
+                )
                 listWithoutBase.add(rateModel)
             }
         }
@@ -162,7 +170,13 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
         for (i in 1 until currentList.size) {
             val currencyCode = currentList[i].currencyCode()
             val rate = entities.rates[currencyCode] ?: 0.0
-            list.add(RateModel(CurrencyWithFlagModel.fromString(currencyCode), applyRate(rate)))
+            list.add(
+                RateModel(
+                    CurrencyWithFlagModel.fromString(
+                        currencyCode
+                    ), applyRate(rate)
+                )
+            )
         }
         return list
     }

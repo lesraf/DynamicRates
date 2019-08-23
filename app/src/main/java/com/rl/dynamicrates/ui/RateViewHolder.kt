@@ -4,6 +4,8 @@ import android.text.Editable
 import android.view.MotionEvent
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
+import com.rl.dynamicrates.common.TextChangedWatcher
+import com.rl.dynamicrates.ui.models.RateModel
 import kotlinx.android.synthetic.main.rate_view.view.*
 import java.text.DecimalFormat
 

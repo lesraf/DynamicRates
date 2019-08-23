@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.common
 
 import android.text.Editable
 import android.text.TextWatcher
