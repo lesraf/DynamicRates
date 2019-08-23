@@ -1,6 +1,7 @@
 package com.rl.dynamicrates.ui
 
 import android.text.Editable
+import android.view.MotionEvent
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.rate_view.view.*
@@ -68,7 +69,12 @@ class RateViewHolder(
             itemView.currencyAmount.requestFocus()
             onRateClickListener(rateModel)
         }
-        itemView.currencyAmount.setOnClickListener { onRateClickListener(rateModel) }
+        itemView.currencyAmount.setOnTouchListener { _, event ->
+            if (MotionEvent.ACTION_UP == event.action) {
+                onRateClickListener(rateModel)
+            }
+            false
+        }
     }
 
     private fun updateTextChangedWatcher(isBase: Boolean) {
