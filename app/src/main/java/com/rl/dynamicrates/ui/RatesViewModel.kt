@@ -16,22 +16,21 @@ import javax.inject.Inject
 class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUseCase) : ViewModel() {
 
     private val _ratesListData = MutableLiveData<List<RateModel>>()
-
-    private val _progressBarVisibility = MutableLiveData<Boolean>()
-
+    private val _progressBarVisibility = MutableLiveData<Boolean>().apply { postValue(true) }
     private val _errorSnackbarVisibility = MutableLiveData<Boolean>()
-
+    private val initialAmount = 100.0
     private val syncObject = Any()
-
-    var chosenBase: RateModel = RateModel(CurrencyWithFlagModel.EUR, 100.0, true)
-    var currentList: ArrayList<RateModel>? = null
-    var currentRatesEntity: RatesEntity? = null
 
     private var intervalDisposable: Disposable? = null
     private var snackbarDisposable: Disposable? = null
+    private var chosenBase: RateModel = RateModel(CurrencyWithFlagModel.EUR, initialAmount, true)
+    private var currentList: ArrayList<RateModel>? = null
+    private var currentRatesEntity: RatesEntity? = null
 
-    init {
-        _progressBarVisibility.postValue(true)
+    override fun onCleared() {
+        intervalDisposable?.dispose()
+        snackbarDisposable?.dispose()
+        super.onCleared()
     }
 
     fun ratesListData(): LiveData<List<RateModel>> {
@@ -53,57 +52,6 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
     fun onStop() {
         intervalDisposable?.dispose()
     }
-
-    private fun startFetchingRates() {
-        intervalDisposable = Observable.interval(1, TimeUnit.SECONDS)
-            .startWith(0)
-            .observeOn(Schedulers.io())
-            .flatMapSingle { getRatesUseCase.run(chosenBase.currencyCode()) }
-            .observeOn(Schedulers.computation())
-            .filter { tryValue ->
-                when (tryValue) {
-                    is Try.Error -> true
-                    is Try.Success -> tryValue.success.base == chosenBase.currencyCode()
-                }
-            }
-            .map { tryValue ->
-                when (tryValue) {
-                    is Try.Error -> tryValue
-                    is Try.Success -> {
-                        val entity = tryValue.success
-                        currentRatesEntity = entity
-                        val list = ArrayList<RateModel>()
-
-                        list.add(chosenBase)
-                        currentList?.let { currentList ->
-                            populateExistingList(currentList, entity, list)
-                        } ?: run {
-                            populateNewList(entity, list)
-                        }
-                        return@map Try.Success(list)
-                    }
-                }
-
-            }
-            .subscribe(
-                { tryValue ->
-                    when (tryValue) {
-                        is Try.Error -> {
-                            Timber.e(tryValue.throwable)
-                            showErrorSnackbar()
-                        }
-                        is Try.Success -> {
-                            val rateModels = tryValue.success
-                            currentList = rateModels
-                            _ratesListData.postValue(rateModels)
-                            _progressBarVisibility.postValue(false)
-                        }
-                    }
-                },
-                { throwable -> Timber.e(throwable) }
-            )
-    }
-
 
     fun onRateClick(rateModel: RateModel) {
         synchronized(syncObject) {
@@ -137,17 +85,72 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
         }
     }
 
+    private fun startFetchingRates() {
+        intervalDisposable = Observable.interval(1, TimeUnit.SECONDS)
+            .startWith(0)
+            .observeOn(Schedulers.io())
+            .flatMapSingle { getRatesUseCase.run(chosenBase.currencyCode()) }
+            .observeOn(Schedulers.computation())
+            .filter { tryValue ->
+                when (tryValue) {
+                    is Try.Error -> true
+                    is Try.Success -> isResponseForCurrentBase(tryValue)
+                }
+            }
+            .map { tryValue ->
+                when (tryValue) {
+                    is Try.Error -> tryValue
+                    is Try.Success -> Try.Success(mapResponseToRatesList(tryValue))
+                }
+            }
+            .subscribe(
+                { tryValue ->
+                    when (tryValue) {
+                        is Try.Error -> showErrorSnackbar(tryValue.throwable)
+                        is Try.Success -> handleResponseSuccess(tryValue)
+                    }
+                },
+                { throwable -> showErrorSnackbar(throwable) }
+            )
+    }
+
     private fun populateNewList(
         entities: RatesEntity,
         list: ArrayList<RateModel>
     ): ArrayList<RateModel> {
+        val listWithoutBase = ArrayList<RateModel>()
         for (currency in entities.rates.keys) {
             entities.rates[currency]?.let { rate ->
                 val rateModel = RateModel(CurrencyWithFlagModel.fromString(currency), applyRate(rate))
-                list.add(rateModel)
+                listWithoutBase.add(rateModel)
             }
         }
+        listWithoutBase.sortBy { rateModel -> rateModel.currencyCode() }
+        list.addAll(listWithoutBase)
+        return list
+    }
 
+    private fun handleResponseSuccess(tryValue: Try.Success<ArrayList<RateModel>>) {
+        val rateModels = tryValue.success
+        currentList = rateModels
+        _ratesListData.postValue(rateModels)
+        _progressBarVisibility.postValue(false)
+    }
+
+    private fun isResponseForCurrentBase(tryValue: Try.Success<RatesEntity>) =
+        tryValue.success.base == chosenBase.currencyCode()
+
+    private fun mapResponseToRatesList(tryValue: Try.Success<RatesEntity>): ArrayList<RateModel> {
+        val entity = tryValue.success
+        currentRatesEntity = entity
+        val list = ArrayList<RateModel>()
+
+        list.add(chosenBase)
+        currentList?.let { currentList ->
+            populateExistingList(currentList, entity, list)
+        } ?: run {
+            populateNewList(entity, list)
+        }
         return list
     }
 
@@ -161,7 +164,6 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
             val rate = entities.rates[currencyCode] ?: 0.0
             list.add(RateModel(CurrencyWithFlagModel.fromString(currencyCode), applyRate(rate)))
         }
-
         return list
     }
 
@@ -173,16 +175,11 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
         return chosenBase.currencyWithFlagModel == rateModel.currencyWithFlagModel
     }
 
-    private fun showErrorSnackbar() {
+    private fun showErrorSnackbar(throwable: Throwable) {
+        Timber.e(throwable)
         _errorSnackbarVisibility.postValue(true)
         snackbarDisposable = Observable
             .timer(1, TimeUnit.SECONDS)
             .subscribe { _errorSnackbarVisibility.postValue(false) }
-    }
-
-    override fun onCleared() {
-        intervalDisposable?.dispose()
-        snackbarDisposable?.dispose()
-        super.onCleared()
     }
 }

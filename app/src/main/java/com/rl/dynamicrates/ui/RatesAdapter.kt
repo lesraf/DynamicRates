@@ -24,16 +24,14 @@ class RatesAdapter(
     }
 
     override fun onBindViewHolder(holder: RateViewHolder, position: Int, payloads: MutableList<Any>) {
-        if (payloads.isEmpty()) {
-            super.onBindViewHolder(holder, position, payloads)
-        } else {
+        if (payloads.isNotEmpty()) {
             val change = payloads.last() as? RateViewHolder.PayloadChange
             if (change != null) {
                 holder.updatePayload(change)
-            } else {
-                super.onBindViewHolder(holder, position, payloads)
+                return
             }
         }
+        super.onBindViewHolder(holder, position, payloads)
     }
 
     override fun getItemCount() = ratesList.size
