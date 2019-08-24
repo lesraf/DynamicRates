@@ -6,6 +6,6 @@ import dagger.android.ContributesAndroidInjector
 
 @Module
 abstract class ActivitiesBuilder {
-    @ContributesAndroidInjector()
+    @ContributesAndroidInjector(modules = [RatesActivityModule::class])
     abstract fun provideRatesActivity(): RatesActivity
 }

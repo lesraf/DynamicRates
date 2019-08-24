@@ -19,8 +19,10 @@ class RatesActivity : AppCompatActivity() {
     @Inject
     lateinit var viewModelFactory: ViewModelProvider.Factory
 
-    private lateinit var viewModel: RatesViewModel
-    private lateinit var ratesAdapter: RatesAdapter
+    @Inject
+    lateinit var ratesAdapter: RatesAdapter
+
+    private var viewModel: RatesViewModel? = null
 
     private var snackbar: Snackbar? = null
 
@@ -36,12 +38,12 @@ class RatesActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        viewModel.onStart()
+        viewModel?.onStart()
     }
 
     override fun onStop() {
         super.onStop()
-        viewModel.onStop()
+        viewModel?.onStop()
     }
 
     private fun setupViewModel() {
@@ -49,8 +51,6 @@ class RatesActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        ratesAdapter = RatesAdapter(prepareOnRateClickListener(), prepareOnAmountChangeListener())
-
         ratesList.apply {
             layoutManager = LinearLayoutManager(this@RatesActivity)
             adapter = ratesAdapter
@@ -58,22 +58,22 @@ class RatesActivity : AppCompatActivity() {
     }
 
     private fun setupLiveDatas() {
-        viewModel.ratesListData()
-            .observe(
+        viewModel?.ratesListData()
+            ?.observe(
                 this,
                 Observer { ratesModels -> ratesAdapter.update(ratesModels) }
             )
 
-        viewModel.progressBarVisibility()
-            .observe(
+        viewModel?.progressBarVisibility()
+            ?.observe(
                 this,
                 Observer { visible ->
                     if (visible) progressBar.visible() else progressBar.gone()
                 }
             )
 
-        viewModel.errorSnackbarVisibility()
-            .observe(this, Observer { visible ->
+        viewModel?.errorSnackbarVisibility()
+            ?.observe(this, Observer { visible ->
                 if (visible) {
                     initSnackbarIfShould()
                     snackbar?.show()
@@ -89,11 +89,11 @@ class RatesActivity : AppCompatActivity() {
         }
     }
 
-    private fun prepareOnAmountChangeListener(): OnAmountChangeListener {
-        return viewModel::onAmountChange
+    fun prepareOnAmountChangeListener(): OnAmountChangeListener {
+        return { rateModel -> viewModel?.onAmountChange(rateModel) }
     }
 
-    private fun prepareOnRateClickListener(): OnRateClickListener {
-        return viewModel::onRateClick
+    fun prepareOnRateClickListener(): OnRateClickListener {
+        return { rateModel -> viewModel?.onRateClick(rateModel) }
     }
 }

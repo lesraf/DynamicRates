@@ -6,13 +6,17 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.rl.dynamicrates.R
 import com.rl.dynamicrates.ui.models.RateModel
+import javax.inject.Inject
 
-class RatesAdapter(
+class RatesAdapter @Inject constructor(
     private val onClickListener: OnRateClickListener,
-    private val onAmountChangeListener: OnAmountChangeListener
-) : RecyclerView.Adapter<RateViewHolder>() {
+    private val onAmountChangeListener: OnAmountChangeListener,
+    private val presenter: RatesAdapterPresenter
+) : RecyclerView.Adapter<RateViewHolder>(), RatesAdapterContract.View {
 
-    private val ratesList = mutableListOf<RateModel>()
+    init {
+        presenter.attachView(this)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RateViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -21,31 +25,22 @@ class RatesAdapter(
     }
 
     override fun onBindViewHolder(holder: RateViewHolder, position: Int) {
-        holder.update(ratesList[position])
+        holder.update(presenter.onBindViewHolder(position))
     }
 
     override fun onBindViewHolder(holder: RateViewHolder, position: Int, payloads: MutableList<Any>) {
-        if (payloads.isNotEmpty()) {
-            val change = payloads.last() as? RateViewHolder.PayloadChange
-            if (change != null) {
-                holder.updatePayload(change)
-                return
-            }
-        }
-        super.onBindViewHolder(holder, position, payloads)
+        presenter.onBindViewHolder(payloads)?.let { change ->
+            holder.updatePayload(change)
+        } ?: super.onBindViewHolder(holder, position, payloads)
     }
 
-    override fun getItemCount() = ratesList.size
+    override fun getItemCount() = presenter.onGetItemCount()
 
     fun update(newRatesList: List<RateModel>) {
-        val diffResult = DiffUtil.calculateDiff(
-            RatesDiffUtilCallback(
-                ratesList,
-                newRatesList
-            )
-        )
-        ratesList.clear()
-        ratesList.addAll(newRatesList)
-        diffResult.dispatchUpdatesTo(this)
+        presenter.onUpdate(newRatesList)
+    }
+
+    override fun dispatchUpdates(result: DiffUtil.DiffResult) {
+        result.dispatchUpdatesTo(this)
     }
 }
