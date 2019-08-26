@@ -18,12 +18,10 @@ class RatesActivity : AppCompatActivity() {
 
     @Inject
     lateinit var viewModelFactory: ViewModelProvider.Factory
-
     @Inject
     lateinit var ratesAdapter: RatesAdapter
 
     private var viewModel: RatesViewModel? = null
-
     private var snackbar: Snackbar? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,6 +42,11 @@ class RatesActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         viewModel?.onStop()
+    }
+
+    override fun onDestroy() {
+        ratesAdapter.onDestroy()
+        super.onDestroy()
     }
 
     private fun setupViewModel() {

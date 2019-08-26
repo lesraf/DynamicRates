@@ -14,5 +14,6 @@ interface RatesAdapterContract {
         fun onGetItemCount(): Int
         fun onBindViewHolder(position: Int): RateModel
         fun onBindViewHolder(payloads: MutableList<Any>): RateViewHolder.PayloadChange?
+        fun onDestroy()
     }
 }

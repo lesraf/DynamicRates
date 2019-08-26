@@ -2,6 +2,7 @@ package com.rl.dynamicrates.ui
 
 import com.rl.dynamicrates.ui.models.RateModel
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import timber.log.Timber
 import javax.inject.Inject
@@ -9,15 +10,16 @@ import javax.inject.Inject
 class RatesAdapterPresenter @Inject constructor(
     private val calculateRatesDiffUseCase: CalculateRatesDiffUseCase
 ) : RatesAdapterContract.Presenter {
+    private var view: RatesAdapterContract.View? = null
     private val ratesList = ArrayList<RateModel>()
-    var view: RatesAdapterContract.View? = null
+    private var disposable: Disposable? = null
 
     override fun attachView(view: RatesAdapterContract.View) {
         this.view = view
     }
 
     override fun onUpdate(newRatesList: List<RateModel>) {
-        calculateRatesDiffUseCase.run(ratesList, newRatesList) // TODO add disposable
+        disposable = calculateRatesDiffUseCase.run(ratesList, newRatesList)
             .subscribeOn(Schedulers.computation())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(
@@ -41,5 +43,9 @@ class RatesAdapterPresenter @Inject constructor(
             return payloads.last() as? RateViewHolder.PayloadChange
         }
         return null
+    }
+
+    override fun onDestroy() {
+        disposable?.dispose()
     }
 }

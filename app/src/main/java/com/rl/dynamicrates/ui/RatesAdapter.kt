@@ -11,7 +11,7 @@ import javax.inject.Inject
 class RatesAdapter @Inject constructor(
     private val onClickListener: OnRateClickListener,
     private val onAmountChangeListener: OnAmountChangeListener,
-    private val presenter: RatesAdapterPresenter
+    private val presenter: RatesAdapterContract.Presenter
 ) : RecyclerView.Adapter<RateViewHolder>(), RatesAdapterContract.View {
 
     init {
@@ -42,5 +42,9 @@ class RatesAdapter @Inject constructor(
 
     override fun dispatchUpdates(result: DiffUtil.DiffResult) {
         result.dispatchUpdatesTo(this)
+    }
+
+    fun onDestroy() {
+        presenter.onDestroy()
     }
 }
