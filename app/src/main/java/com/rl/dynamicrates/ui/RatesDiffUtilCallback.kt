@@ -8,8 +8,7 @@ class RatesDiffUtilCallback(
     private val newList: List<RateModel>
 ) : DiffUtil.Callback() {
     override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-        return oldList[oldItemPosition].currencyWithFlagModel == newList[newItemPosition].currencyWithFlagModel //&&
-//                oldList[oldItemPosition].isBase == newList[newItemPosition].isBase
+        return oldList[oldItemPosition].currencyWithFlagModel == newList[newItemPosition].currencyWithFlagModel
     }
 
     override fun getOldListSize() = oldList.size
@@ -23,6 +22,9 @@ class RatesDiffUtilCallback(
     }
 
     override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Any? {
-        return RateViewHolder.PayloadChange(newList[newItemPosition].amount, newList[newItemPosition].isBase)
+        return RateViewHolder.PayloadChange(
+            newList[newItemPosition].amount,
+            newList[newItemPosition].isBase
+        )
     }
 }

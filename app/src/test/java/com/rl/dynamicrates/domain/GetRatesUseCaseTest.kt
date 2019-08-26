@@ -38,7 +38,7 @@ class GetRatesUseCaseTest {
     }
 
     @Test
-    fun `on error return that throwable`() {
+    fun `return throwable on error`() {
         // given
         val throwable = Throwable("Error")
         mockEndpointError(throwable)
@@ -54,7 +54,7 @@ class GetRatesUseCaseTest {
     }
 
     @Test
-    fun `on unsuccessful response return throwable with its message`() {
+    fun `return throwable with its message on unsuccessful response`() {
         // given
         val errorMessage = "This is error message"
         val errorResponse = Response.error<RatesResponse>(
@@ -75,7 +75,7 @@ class GetRatesUseCaseTest {
     }
 
     @Test
-    fun `on unsuccessful response with empty body return throwable with predefined message`() {
+    fun `return throwable with predefined message on unsuccessful response with empty body`() {
         // given
         val errorMessage = "Error without body returned"
         val errorResponse = mock<Response<RatesResponse>>()
@@ -95,7 +95,7 @@ class GetRatesUseCaseTest {
     }
 
     @Test
-    fun `on successful response with empty body return throwable with predefined message`() {
+    fun `return throwable with predefined message on successful response with empty body`() {
         // given
         val errorMessage = "Success without body returned"
         mockEndpointSuccess(Response.success(null))
@@ -112,7 +112,7 @@ class GetRatesUseCaseTest {
     }
 
     @Test
-    fun `on successful response with correct body return RatesEntity`() {
+    fun `return RatesEntity on successful response with correct body`() {
         // given
         val currencyRate = "PLN" to 1.23
         val ratesBase = "EUR"
