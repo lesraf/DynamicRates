@@ -12,9 +12,9 @@ class GetRatesUseCase @Inject constructor(private val ratesApi: RatesApi) {
                 if (response.isSuccessful) {
                     response.body()?.let { body ->
                         Try.Success(body.toEntity())
-                    } ?: Try.Error(Throwable("No body returned"))
+                    } ?: Try.Error(Throwable("Success without body returned"))
                 } else {
-                    Try.Error(Throwable(response.message() ?: "Error without body returned"))
+                    Try.Error(Throwable(response.errorBody()?.string() ?: "Error without body returned"))
                 }
             }
             .onErrorReturn { throwable -> Try.Error(Throwable(throwable)) }
