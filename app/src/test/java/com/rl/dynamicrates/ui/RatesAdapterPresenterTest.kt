@@ -8,6 +8,7 @@ import com.rl.dynamicrates.ui.models.RateModel
 import io.reactivex.Single
 import org.hamcrest.CoreMatchers.*
 import org.hamcrest.MatcherAssert.assertThat
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -36,6 +37,10 @@ class RatesAdapterPresenterTest {
     fun setUp() {
         MockitoAnnotations.initMocks(this)
         presenter = RatesAdapterPresenter(mockCalculateRatesDiffUseCase)
+    }
+
+    @After
+    fun tearDown() {
         verifyNoMoreInteractions(mockView, mockCalculateRatesDiffUseCase)
     }
 

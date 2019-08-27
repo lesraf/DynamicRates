@@ -1,8 +1,8 @@
 package com.rl.dynamicrates.domain
 
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever
-import com.rl.dynamicrates.RxSchedulersAsTrampoline
 import com.rl.dynamicrates.common.Try
 import com.rl.dynamicrates.sources.RatesApi
 import com.rl.dynamicrates.sources.RatesResponse
@@ -12,8 +12,8 @@ import junit.framework.TestCase.fail
 import okhttp3.ResponseBody
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.MatcherAssert.assertThat
+import org.junit.After
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito.anyString
@@ -32,21 +32,27 @@ class GetRatesUseCaseTest {
     @Before
     fun setUp() {
         MockitoAnnotations.initMocks(this)
-        verifyNoMoreInteractions(mockRatesApi)
 
         getRatesUseCase = GetRatesUseCase(mockRatesApi)
+    }
+
+    @After
+    fun tearDown() {
+        verifyNoMoreInteractions(mockRatesApi)
     }
 
     @Test
     fun `return throwable on error`() {
         // given
         val throwable = Throwable("Error")
+        val base = ""
         mockEndpointError(throwable)
 
         // when
-        val testObserver = getRatesUseCase.run("").test()
+        val testObserver = getRatesUseCase.run(base).test()
 
         // then
+        verityRatesApiCall(base)
         extractFirstValueAsTryError(testObserver) { value ->
             testObserver.assertValue(value)
             testObserver.assertComplete()
@@ -56,6 +62,7 @@ class GetRatesUseCaseTest {
     @Test
     fun `return throwable with its message on unsuccessful response`() {
         // given
+        val base = ""
         val errorMessage = "This is error message"
         val errorResponse = Response.error<RatesResponse>(
             400,
@@ -64,9 +71,10 @@ class GetRatesUseCaseTest {
         mockEndpointSuccess(errorResponse)
 
         // when
-        val testObserver = getRatesUseCase.run("").test()
+        val testObserver = getRatesUseCase.run(base).test()
 
         // then
+        verityRatesApiCall(base)
         extractFirstValueAsTryError(testObserver) { value ->
             testObserver.assertValueCount(1)
             testObserver.assertComplete()
@@ -77,6 +85,7 @@ class GetRatesUseCaseTest {
     @Test
     fun `return throwable with predefined message on unsuccessful response with empty body`() {
         // given
+        val base = ""
         val errorMessage = "Error without body returned"
         val errorResponse = mock<Response<RatesResponse>>()
         whenever(errorResponse.isSuccessful).thenReturn(false)
@@ -84,9 +93,10 @@ class GetRatesUseCaseTest {
         mockEndpointSuccess(errorResponse)
 
         // when
-        val testObserver = getRatesUseCase.run("").test()
+        val testObserver = getRatesUseCase.run(base).test()
 
         // then
+        verityRatesApiCall(base)
         extractFirstValueAsTryError(testObserver) { value ->
             testObserver.assertValueCount(1)
             testObserver.assertComplete()
@@ -97,13 +107,15 @@ class GetRatesUseCaseTest {
     @Test
     fun `return throwable with predefined message on successful response with empty body`() {
         // given
+        val base = ""
         val errorMessage = "Success without body returned"
         mockEndpointSuccess(Response.success(null))
 
         // when
-        val testObserver = getRatesUseCase.run("").test()
+        val testObserver = getRatesUseCase.run(base).test()
 
         // then
+        verityRatesApiCall(base)
         extractFirstValueAsTryError(testObserver) { value ->
             testObserver.assertValueCount(1)
             testObserver.assertComplete()
@@ -119,9 +131,10 @@ class GetRatesUseCaseTest {
         mockEndpointSuccess(Response.success(RatesResponse(ratesBase, mapOf(currencyRate))))
 
         // when
-        val testObserver = getRatesUseCase.run("").test()
+        val testObserver = getRatesUseCase.run(ratesBase).test()
 
         // then
+        verityRatesApiCall(ratesBase)
         extractFirstValueAsTrySuccess(testObserver) { value ->
             testObserver.assertComplete()
             assertThat(value.success.base, equalTo(ratesBase))
@@ -163,5 +176,8 @@ class GetRatesUseCaseTest {
         }
     }
 
+    private fun verityRatesApiCall(base: String) {
+        verify(mockRatesApi).getRates(base)
+    }
 
 }
