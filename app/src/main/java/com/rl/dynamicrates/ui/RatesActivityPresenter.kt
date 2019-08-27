@@ -1,28 +1,27 @@
 package com.rl.dynamicrates.ui
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import com.rl.dynamicrates.common.Try
 import com.rl.dynamicrates.domain.GetRatesUseCase
 import com.rl.dynamicrates.domain.RatesEntity
 import com.rl.dynamicrates.ui.models.CurrencyWithFlagModel
 import com.rl.dynamicrates.ui.models.RateModel
 import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUseCase) : ViewModel() {
+class RatesActivityPresenter @Inject constructor(
+    private val getRatesUseCase: GetRatesUseCase
+) : RatesActivityContract.Presenter {
 
-    private val _ratesListData = MutableLiveData<List<RateModel>>()
-    private val _progressBarVisibility = MutableLiveData<Boolean>().apply { postValue(true) }
-    private val _errorSnackbarVisibility = MutableLiveData<Boolean>()
     private val initialAmount = 100.0
     private val syncObject = Any()
 
+    private var showProgressBar = true
+    private var view: RatesActivityContract.View? = null
     private var intervalDisposable: Disposable? = null
     private var snackbarDisposable: Disposable? = null
     private var chosenBase: RateModel = RateModel(
@@ -33,33 +32,24 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
     private var currentList: ArrayList<RateModel>? = null
     private var currentRatesEntity: RatesEntity? = null
 
-    override fun onCleared() {
-        intervalDisposable?.dispose()
-        snackbarDisposable?.dispose()
-        super.onCleared()
+    override fun attachView(view: RatesActivityContract.View) {
+        this.view = view
     }
 
-    fun ratesListData(): LiveData<List<RateModel>> {
-        return _ratesListData
-    }
-
-    fun progressBarVisibility(): LiveData<Boolean> {
-        return _progressBarVisibility
-    }
-
-    fun errorSnackbarVisibility(): LiveData<Boolean> {
-        return _errorSnackbarVisibility
-    }
-
-    fun onStart() {
+    override fun onStart() {
         startFetchingRates()
     }
 
-    fun onStop() {
+    override fun onStop() {
         intervalDisposable?.dispose()
     }
 
-    fun onRateClick(rateModel: RateModel) {
+    override fun onDestroy() {
+        intervalDisposable?.dispose()
+        snackbarDisposable?.dispose()
+    }
+
+    override fun onRateClick(rateModel: RateModel) {
         synchronized(syncObject) {
             if (!isBaseCurrency(rateModel)) {
                 currentList?.get(0)?.let { previousBase ->
@@ -69,12 +59,12 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
                 currentList?.remove(rateModel)
                 chosenBase = rateModel.copy(isBase = true)
                 currentList?.add(0, chosenBase)
-                _ratesListData.postValue(ArrayList(currentList))
+                view?.updateRates(ArrayList(currentList))
             }
         }
     }
 
-    fun onAmountChange(rateModel: RateModel) {
+    override fun onAmountChange(rateModel: RateModel) {
         if (rateModel.currencyWithFlagModel == chosenBase.currencyWithFlagModel) {
             chosenBase = chosenBase.copy(amount = rateModel.amount)
 
@@ -87,11 +77,16 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
                 }
             }
             currentList = list
-            _ratesListData.postValue(currentList)
+            view?.updateRates(ArrayList(currentList))
         }
     }
 
     private fun startFetchingRates() {
+        if (showProgressBar) {
+            showProgressBar = false
+            view?.showProgressBar()
+        }
+
         intervalDisposable = Observable.interval(1, TimeUnit.SECONDS)
             .startWith(0)
             .observeOn(Schedulers.io())
@@ -109,6 +104,7 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
                     is Try.Success -> Try.Success(mapResponseToRatesList(tryValue))
                 }
             }
+            .observeOn(AndroidSchedulers.mainThread())
             .subscribe(
                 { tryValue ->
                     when (tryValue) {
@@ -141,8 +137,8 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
     private fun handleResponseSuccess(tryValue: Try.Success<ArrayList<RateModel>>) {
         val rateModels = tryValue.success
         currentList = rateModels
-        _ratesListData.postValue(rateModels)
-        _progressBarVisibility.postValue(false)
+        view?.updateRates(ArrayList(currentList))
+        view?.hideProgressBar()
     }
 
     private fun isResponseForCurrentBase(tryValue: Try.Success<RatesEntity>) =
@@ -191,9 +187,10 @@ class RatesViewModel @Inject constructor(private val getRatesUseCase: GetRatesUs
 
     private fun showErrorSnackbar(throwable: Throwable) {
         Timber.e(throwable)
-        _errorSnackbarVisibility.postValue(true)
+        view?.showErrorSnackbar()
         snackbarDisposable = Observable
             .timer(1, TimeUnit.SECONDS)
-            .subscribe { _errorSnackbarVisibility.postValue(false) }
+            .subscribe { view?.hideErrorSnackbar() }
     }
+
 }
