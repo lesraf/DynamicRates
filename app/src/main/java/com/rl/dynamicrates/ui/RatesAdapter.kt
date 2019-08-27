@@ -21,7 +21,7 @@ class RatesAdapter @Inject constructor(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RateViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.rate_view, parent, false)
-        return RateViewHolder(view, onClickListener, onAmountChangeListener)
+        return RateViewHolder(view, RateViewHolderPresenter(onClickListener, onAmountChangeListener))
     }
 
     override fun onBindViewHolder(holder: RateViewHolder, position: Int) {
