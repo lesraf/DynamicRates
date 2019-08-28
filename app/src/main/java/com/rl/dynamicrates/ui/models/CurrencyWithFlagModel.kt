@@ -3,6 +3,7 @@ package com.rl.dynamicrates.ui.models
 import com.rl.dynamicrates.R
 import java.util.*
 
+
 enum class CurrencyWithFlagModel(
     val flagRes: Int,
     val currency: Currency

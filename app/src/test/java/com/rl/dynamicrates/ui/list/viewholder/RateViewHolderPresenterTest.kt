@@ -3,7 +3,6 @@ package com.rl.dynamicrates.ui.list.viewholder
 import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.verifyNoMoreInteractions
 import com.nhaarman.mockitokotlin2.whenever
-import com.rl.dynamicrates.ui.list.viewholder.*
 import com.rl.dynamicrates.ui.models.CurrencyWithFlagModel
 import com.rl.dynamicrates.ui.models.RateModel
 import org.hamcrest.CoreMatchers

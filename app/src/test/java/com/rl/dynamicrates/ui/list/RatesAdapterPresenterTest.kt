@@ -3,10 +3,7 @@ package com.rl.dynamicrates.ui.list
 import androidx.recyclerview.widget.DiffUtil
 import com.nhaarman.mockitokotlin2.*
 import com.rl.dynamicrates.RxSchedulersAsTrampoline
-import com.rl.dynamicrates.ui.list.CalculateRatesDiffUseCase
 import com.rl.dynamicrates.ui.list.viewholder.RateViewHolder
-import com.rl.dynamicrates.ui.list.RatesAdapterContract
-import com.rl.dynamicrates.ui.list.RatesAdapterPresenter
 import com.rl.dynamicrates.ui.models.CurrencyWithFlagModel
 import com.rl.dynamicrates.ui.models.RateModel
 import io.reactivex.Single
