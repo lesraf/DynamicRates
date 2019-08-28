@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.activity
 
 import androidx.annotation.VisibleForTesting
 import com.rl.dynamicrates.common.Try
@@ -22,7 +22,6 @@ class RatesActivityPresenter @Inject constructor(
     var view: RatesActivityContract.View? = null
 
     private val initialAmount = 100.0
-    private val syncObject = Any()
 
     private var showProgressBar = true
     private var intervalDisposable: Disposable? = null
@@ -33,7 +32,6 @@ class RatesActivityPresenter @Inject constructor(
         true
     )
     private var currentList: ArrayList<RateModel>? = null
-
     private var currentRatesEntity: RatesEntity? = null
 
     override fun attachView(view: RatesActivityContract.View) {
@@ -53,17 +51,15 @@ class RatesActivityPresenter @Inject constructor(
     }
 
     override fun onRateClick(rateModel: RateModel) {
-        synchronized(syncObject) {
-            if (!isBaseCurrency(rateModel)) {
-                currentList?.get(0)?.let { previousBase ->
-                    currentList?.remove(previousBase)
-                    currentList?.add(0, previousBase.copy(isBase = false))
-                }
-                currentList?.remove(rateModel)
-                chosenBase = rateModel.copy(isBase = true)
-                currentList?.add(0, chosenBase)
-                view?.updateRates(ArrayList(currentList))
+        if (!isBaseCurrency(rateModel)) {
+            currentList?.get(0)?.let { previousBase ->
+                currentList?.remove(previousBase)
+                currentList?.add(0, previousBase.copy(isBase = false))
             }
+            currentList?.remove(rateModel)
+            chosenBase = rateModel.copy(isBase = true)
+            currentList?.add(0, chosenBase)
+            view?.updateRates(ArrayList(currentList))
         }
     }
 
@@ -95,57 +91,31 @@ class RatesActivityPresenter @Inject constructor(
             .observeOn(Schedulers.io())
             .flatMapSingle { getRatesUseCase.run(chosenBase.currencyCode()) }
             .observeOn(Schedulers.computation())
-            .filter { tryValue ->
-                when (tryValue) {
-                    is Try.Error -> true
-                    is Try.Success -> isResponseForCurrentBase(tryValue)
-                }
-            }
-            .map { tryValue ->
-                when (tryValue) {
-                    is Try.Error -> tryValue
-                    is Try.Success -> Try.Success(mapResponseToRatesList(tryValue))
-                }
-            }
+            .filter(this::filterRatesResponse)
+            .map(this::mapRatesResponse)
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(
-                { tryValue ->
-                    when (tryValue) {
-                        is Try.Error -> showErrorSnackbar(tryValue.throwable)
-                        is Try.Success -> handleResponseSuccess(tryValue)
-                    }
-                },
-                { throwable -> showErrorSnackbar(throwable) }
+                this::handleRatesResponse,
+                this::showErrorSnackbar
             )
     }
 
-    private fun populateNewList(
-        entities: RatesEntity,
-        list: ArrayList<RateModel>
-    ): ArrayList<RateModel> {
-        val listWithoutBase = ArrayList<RateModel>()
-        for (currency in entities.rates.keys) {
-            entities.rates[currency]?.let { rate ->
-                val rateModel = RateModel(
-                    CurrencyWithFlagModel.fromString(currency), applyRate(rate)
-                )
-                listWithoutBase.add(rateModel)
-            }
+    private fun filterRatesResponse(tryValue: Try<RatesEntity>): Boolean {
+        return when (tryValue) {
+            is Try.Error -> true
+            is Try.Success -> isResponseForCurrentBase(tryValue)
         }
-        listWithoutBase.sortBy { rateModel -> rateModel.currencyCode() }
-        list.addAll(listWithoutBase)
-        return list
-    }
-
-    private fun handleResponseSuccess(tryValue: Try.Success<ArrayList<RateModel>>) {
-        val rateModels = tryValue.success
-        currentList = rateModels
-        view?.updateRates(ArrayList(currentList))
-        view?.hideProgressBar()
     }
 
     private fun isResponseForCurrentBase(tryValue: Try.Success<RatesEntity>) =
         tryValue.success.base == chosenBase.currencyCode()
+
+    private fun mapRatesResponse(tryValue: Try<RatesEntity>): Try<ArrayList<RateModel>> {
+        return when (tryValue) {
+            is Try.Error -> tryValue
+            is Try.Success -> Try.Success(mapResponseToRatesList(tryValue))
+        }
+    }
 
     private fun mapResponseToRatesList(tryValue: Try.Success<RatesEntity>): ArrayList<RateModel> {
         val entity = tryValue.success
@@ -182,6 +152,38 @@ class RatesActivityPresenter @Inject constructor(
 
     private fun applyRate(rate: Double): Double {
         return rate * chosenBase.amount
+    }
+
+    private fun populateNewList(
+        entities: RatesEntity,
+        list: ArrayList<RateModel>
+    ): ArrayList<RateModel> {
+        val listWithoutBase = ArrayList<RateModel>()
+        for (currency in entities.rates.keys) {
+            entities.rates[currency]?.let { rate ->
+                val rateModel = RateModel(
+                    CurrencyWithFlagModel.fromString(currency), applyRate(rate)
+                )
+                listWithoutBase.add(rateModel)
+            }
+        }
+        listWithoutBase.sortBy { rateModel -> rateModel.currencyCode() }
+        list.addAll(listWithoutBase)
+        return list
+    }
+
+    private fun handleRatesResponse(tryValue: Try<ArrayList<RateModel>>?) {
+        when (tryValue) {
+            is Try.Error -> showErrorSnackbar(tryValue.throwable)
+            is Try.Success -> handleResponseSuccess(tryValue)
+        }
+    }
+
+    private fun handleResponseSuccess(tryValue: Try.Success<ArrayList<RateModel>>) {
+        val rateModels = tryValue.success
+        currentList = rateModels
+        view?.updateRates(ArrayList(currentList))
+        view?.hideProgressBar()
     }
 
     private fun isBaseCurrency(rateModel: RateModel): Boolean {

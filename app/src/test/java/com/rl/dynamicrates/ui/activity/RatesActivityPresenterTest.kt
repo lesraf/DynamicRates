@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.activity
 
 import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify

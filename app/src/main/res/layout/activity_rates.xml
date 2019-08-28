@@ -6,7 +6,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/container"
-        tools:context=".ui.RatesActivity">
+        tools:context=".ui.activity.RatesActivity">
 
     <TextView
             android:id="@+id/title"

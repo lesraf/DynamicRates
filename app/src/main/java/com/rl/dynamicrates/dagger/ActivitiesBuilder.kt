@@ -1,6 +1,6 @@
 package com.rl.dynamicrates.dagger
 
-import com.rl.dynamicrates.ui.RatesActivity
+import com.rl.dynamicrates.ui.activity.RatesActivity
 import dagger.Module
 import dagger.android.ContributesAndroidInjector
 

@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.activity
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -7,12 +7,14 @@ import com.google.android.material.snackbar.Snackbar
 import com.rl.dynamicrates.R
 import com.rl.dynamicrates.common.gone
 import com.rl.dynamicrates.common.visible
+import com.rl.dynamicrates.ui.list.RatesAdapter
 import com.rl.dynamicrates.ui.models.RateModel
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_rates.*
 import javax.inject.Inject
 
-class RatesActivity : AppCompatActivity(), RatesActivityContract.View {
+class RatesActivity : AppCompatActivity(),
+    RatesActivityContract.View {
 
     @Inject
     lateinit var presenter: RatesActivityPresenter
@@ -84,11 +86,7 @@ class RatesActivity : AppCompatActivity(), RatesActivityContract.View {
         }
     }
 
-    fun prepareOnAmountChangeListener(): OnAmountChangeListener {
-        return { rateModel -> presenter.onAmountChange(rateModel) }
-    }
+    fun prepareOnAmountChangeListener() = presenter::onAmountChange
 
-    fun prepareOnRateClickListener(): OnRateClickListener {
-        return { rateModel -> presenter.onRateClick(rateModel) }
-    }
+    fun prepareOnRateClickListener() = presenter::onRateClick
 }

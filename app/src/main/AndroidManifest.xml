@@ -15,7 +15,7 @@
             android:name=".DynamicRatesApplication"
             android:theme="@style/AppTheme">
 
-        <activity android:name=".ui.RatesActivity">
+        <activity android:name=".ui.activity.RatesActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 

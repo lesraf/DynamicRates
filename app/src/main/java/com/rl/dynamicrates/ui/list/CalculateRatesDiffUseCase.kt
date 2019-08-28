@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.list
 
 import androidx.recyclerview.widget.DiffUtil
 import com.rl.dynamicrates.ui.models.RateModel

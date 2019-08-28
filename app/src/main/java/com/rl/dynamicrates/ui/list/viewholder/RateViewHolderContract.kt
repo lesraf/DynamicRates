@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.list.viewholder
 
 import com.rl.dynamicrates.ui.models.RateModel
 

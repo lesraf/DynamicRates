@@ -1,8 +1,8 @@
 package com.rl.dynamicrates.dagger
 
-import com.rl.dynamicrates.ui.RatesActivity
-import com.rl.dynamicrates.ui.RatesAdapter
-import com.rl.dynamicrates.ui.RatesAdapterPresenter
+import com.rl.dynamicrates.ui.activity.RatesActivity
+import com.rl.dynamicrates.ui.list.RatesAdapter
+import com.rl.dynamicrates.ui.list.RatesAdapterPresenter
 import dagger.Module
 import dagger.Provides
 

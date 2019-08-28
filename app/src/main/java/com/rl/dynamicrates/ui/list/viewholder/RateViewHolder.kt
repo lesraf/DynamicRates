@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.list.viewholder
 
 import android.text.Editable
 import android.view.MotionEvent
@@ -14,7 +14,8 @@ typealias OnAmountChangeListener = (RateModel) -> Unit
 class RateViewHolder(
     root: View,
     val presenter: RateViewHolderContract.Presenter
-) : RecyclerView.ViewHolder(root), RateViewHolderContract.View {
+) : RecyclerView.ViewHolder(root),
+    RateViewHolderContract.View {
 
     private var textChangedWatcher: TextChangedWatcher? = null
 

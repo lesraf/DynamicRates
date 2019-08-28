@@ -1,10 +1,14 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.list
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.rl.dynamicrates.R
+import com.rl.dynamicrates.ui.list.viewholder.OnAmountChangeListener
+import com.rl.dynamicrates.ui.list.viewholder.OnRateClickListener
+import com.rl.dynamicrates.ui.list.viewholder.RateViewHolder
+import com.rl.dynamicrates.ui.list.viewholder.RateViewHolderPresenter
 import com.rl.dynamicrates.ui.models.RateModel
 import javax.inject.Inject
 
@@ -12,7 +16,8 @@ class RatesAdapter @Inject constructor(
     private val onClickListener: OnRateClickListener,
     private val onAmountChangeListener: OnAmountChangeListener,
     private val presenter: RatesAdapterContract.Presenter
-) : RecyclerView.Adapter<RateViewHolder>(), RatesAdapterContract.View {
+) : RecyclerView.Adapter<RateViewHolder>(),
+    RatesAdapterContract.View {
 
     init {
         presenter.attachView(this)
@@ -21,7 +26,13 @@ class RatesAdapter @Inject constructor(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RateViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.rate_view, parent, false)
-        return RateViewHolder(view, RateViewHolderPresenter(onClickListener, onAmountChangeListener))
+        return RateViewHolder(
+            view,
+            RateViewHolderPresenter(
+                onClickListener,
+                onAmountChangeListener
+            )
+        )
     }
 
     override fun onBindViewHolder(holder: RateViewHolder, position: Int) {

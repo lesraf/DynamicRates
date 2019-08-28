@@ -1,4 +1,4 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.activity
 
 import com.rl.dynamicrates.dagger.RatesActivityModule
 import dagger.Subcomponent

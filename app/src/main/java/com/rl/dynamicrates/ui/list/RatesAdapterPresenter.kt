@@ -1,6 +1,7 @@
-package com.rl.dynamicrates.ui
+package com.rl.dynamicrates.ui.list
 
 import androidx.annotation.VisibleForTesting
+import com.rl.dynamicrates.ui.list.viewholder.RateViewHolder
 import com.rl.dynamicrates.ui.models.RateModel
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
