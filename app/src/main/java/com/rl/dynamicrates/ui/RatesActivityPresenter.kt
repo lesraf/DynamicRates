@@ -1,5 +1,6 @@
 package com.rl.dynamicrates.ui
 
+import androidx.annotation.VisibleForTesting
 import com.rl.dynamicrates.common.Try
 import com.rl.dynamicrates.domain.GetRatesUseCase
 import com.rl.dynamicrates.domain.RatesEntity
@@ -17,11 +18,13 @@ class RatesActivityPresenter @Inject constructor(
     private val getRatesUseCase: GetRatesUseCase
 ) : RatesActivityContract.Presenter {
 
+    @VisibleForTesting
+    var view: RatesActivityContract.View? = null
+
     private val initialAmount = 100.0
     private val syncObject = Any()
 
     private var showProgressBar = true
-    private var view: RatesActivityContract.View? = null
     private var intervalDisposable: Disposable? = null
     private var snackbarDisposable: Disposable? = null
     private var chosenBase: RateModel = RateModel(
@@ -30,6 +33,7 @@ class RatesActivityPresenter @Inject constructor(
         true
     )
     private var currentList: ArrayList<RateModel>? = null
+
     private var currentRatesEntity: RatesEntity? = null
 
     override fun attachView(view: RatesActivityContract.View) {
@@ -45,7 +49,6 @@ class RatesActivityPresenter @Inject constructor(
     }
 
     override fun onDestroy() {
-        intervalDisposable?.dispose()
         snackbarDisposable?.dispose()
     }
 
