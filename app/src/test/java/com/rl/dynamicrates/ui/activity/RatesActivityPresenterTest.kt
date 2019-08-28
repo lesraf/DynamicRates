@@ -196,9 +196,74 @@ class RatesActivityPresenterTest {
         verify(mockView).updateRates(updatedModels)
     }
 
+    @Test
+    fun `don't show 0 for second currency after rate click and amount change before rates response arrives`() {
+        // given
+        val firstCurrencyRate = 1.24
+        val secondCurrencyRate = 7.78
+        val models = goThroughOneSuccessfulResponsePath(firstCurrencyRate, secondCurrencyRate)
+        presenter.onRateClick(models[1])
+
+        val newBaseRateModel =
+            RateModel(CurrencyWithFlagModel.AUD, initialBaseAmount * secondCurrencyRate, true)
+        val updatedModels = arrayListOf(
+            newBaseRateModel,
+            initialRateModel.copy(isBase = false),
+            RateModel(CurrencyWithFlagModel.PLN, initialBaseAmount * firstCurrencyRate)
+        )
+
+        verify(mockView).updateRates(updatedModels)
+
+        // when
+        presenter.onAmountChange(newBaseRateModel.copy(amount = newBaseRateModel.amount * 10))
+
+        // then
+        val modelsWithAmountChanged = arrayListOf(
+            newBaseRateModel.copy(amount = newBaseRateModel.amount * 10),
+            updatedModels[1].copy(amount = updatedModels[1].amount * 10),
+            updatedModels[2].copy(amount = updatedModels[2].amount * 10)
+        )
+        verify(mockView).updateRates(modelsWithAmountChanged)
+    }
+
+    @Test
+    fun `don't show 0 for second currency after rate and rate click to previous base and amount change before rates response arrives`() {
+        // given
+        val firstCurrencyRate = 1.24
+        val secondCurrencyRate = 7.78
+        val models =
+            goThroughOneSuccessfulResponsePath(firstCurrencyRate, secondCurrencyRate, false)
+        presenter.onRateClick(models[1])
+
+        val newBaseRateModel =
+            RateModel(CurrencyWithFlagModel.AUD, initialBaseAmount * secondCurrencyRate, true)
+        val updatedModels = arrayListOf(
+            newBaseRateModel,
+            initialRateModel.copy(isBase = false),
+            RateModel(CurrencyWithFlagModel.PLN, initialBaseAmount * firstCurrencyRate)
+        )
+
+        verify(mockView).updateRates(updatedModels)
+
+        // when
+        presenter.onRateClick(updatedModels[1])
+        presenter.onAmountChange(initialRateModel.copy(amount = initialBaseAmount * 10))
+
+        // then
+        verify(mockView, times(2)).updateRates(models)
+
+        val modelsWithAmountChanged = arrayListOf(
+            models[0].copy(amount = models[0].amount * 10),
+            models[1].copy(amount = models[1].amount * 10),
+            models[2].copy(amount = models[2].amount * 10)
+        )
+        verify(mockView).updateRates(modelsWithAmountChanged)
+    }
+
     private fun goThroughOneSuccessfulResponsePath(
         firstCurrencyRate: Double = 1.23,
-        secondCurrencyRate: Double = 7.77
+        secondCurrencyRate: Double = 7.77,
+        verifyUpdateRates: Boolean = true
     ): ArrayList<RateModel> {
         // given
         val firstCurrency = notInitialBaseCurrencyCode
@@ -223,7 +288,7 @@ class RatesActivityPresenterTest {
             RateModel(CurrencyWithFlagModel.PLN, initialBaseAmount * firstCurrencyRate)
         )
         verify(mockGetRatesUseCase).run(anyString())
-        verify(mockView).updateRates(models)
+        if (verifyUpdateRates) verify(mockView).updateRates(models)
         verify(mockView).hideProgressBar()
 
         return models

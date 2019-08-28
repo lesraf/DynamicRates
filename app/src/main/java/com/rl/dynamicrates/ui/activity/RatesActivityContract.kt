@@ -16,6 +16,6 @@ interface RatesActivityContract {
         fun onStop()
         fun onDestroy()
         fun onAmountChange(rateModel: RateModel)
-        fun onRateClick(rateModel: RateModel)
+        fun onRateClick(clickedRateModel: RateModel)
     }
 }

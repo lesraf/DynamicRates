@@ -22,6 +22,7 @@ class RatesActivityPresenter @Inject constructor(
     var view: RatesActivityContract.View? = null
 
     private val initialAmount = 100.0
+    private val syncObject = Any()
 
     private var showProgressBar = true
     private var intervalDisposable: Disposable? = null
@@ -33,6 +34,7 @@ class RatesActivityPresenter @Inject constructor(
     )
     private var currentList: ArrayList<RateModel>? = null
     private var currentRatesEntity: RatesEntity? = null
+    private var chosenBaseToPreviousBaseRate: Double = 1.0
 
     override fun attachView(view: RatesActivityContract.View) {
         this.view = view
@@ -50,33 +52,28 @@ class RatesActivityPresenter @Inject constructor(
         snackbarDisposable?.dispose()
     }
 
-    override fun onRateClick(rateModel: RateModel) {
-        if (!isBaseCurrency(rateModel)) {
-            currentList?.get(0)?.let { previousBase ->
-                currentList?.remove(previousBase)
-                currentList?.add(0, previousBase.copy(isBase = false))
+    override fun onRateClick(clickedRateModel: RateModel) {
+        synchronized(syncObject) {
+            if (!isBaseCurrency(clickedRateModel)) {
+                prepareChosenToPreviousBaseCurrencyRate(clickedRateModel)
+                recalculateRatesForNewBase(clickedRateModel)
+
+                currentList?.let { currentList ->
+                    swapBases(currentList, clickedRateModel)
+                    view?.updateRates(ArrayList(currentList))
+                }
             }
-            currentList?.remove(rateModel)
-            chosenBase = rateModel.copy(isBase = true)
-            currentList?.add(0, chosenBase)
-            view?.updateRates(ArrayList(currentList))
         }
     }
 
     override fun onAmountChange(rateModel: RateModel) {
-        if (rateModel.currencyWithFlagModel == chosenBase.currencyWithFlagModel) {
-            chosenBase = chosenBase.copy(amount = rateModel.amount)
+        synchronized(syncObject) {
+            if (rateModel.currencyWithFlagModel == chosenBase.currencyWithFlagModel) {
+                chosenBase = chosenBase.copy(amount = rateModel.amount)
 
-            val list = ArrayList<RateModel>()
-
-            list.add(chosenBase)
-            currentRatesEntity?.let { ratesEntity ->
-                currentList?.let { currentModels ->
-                    populateExistingList(currentModels, ratesEntity, list)
-                }
+                currentList = recalculateAmounts()
+                view?.updateRates(ArrayList(currentList))
             }
-            currentList = list
-            view?.updateRates(ArrayList(currentList))
         }
     }
 
@@ -118,17 +115,19 @@ class RatesActivityPresenter @Inject constructor(
     }
 
     private fun mapResponseToRatesList(tryValue: Try.Success<RatesEntity>): ArrayList<RateModel> {
-        val entity = tryValue.success
-        currentRatesEntity = entity
-        val list = ArrayList<RateModel>()
+        synchronized(syncObject) {
+            val entity = tryValue.success
+            currentRatesEntity = entity
+            val list = ArrayList<RateModel>()
 
-        list.add(chosenBase)
-        currentList?.let { currentList ->
-            populateExistingList(currentList, entity, list)
-        } ?: run {
-            populateNewList(entity, list)
+            list.add(chosenBase)
+            currentList?.let { currentList ->
+                populateExistingList(currentList, entity, list)
+            } ?: run {
+                populateNewList(entity, list)
+            }
+            return list
         }
-        return list
     }
 
     private fun populateExistingList(
@@ -138,12 +137,13 @@ class RatesActivityPresenter @Inject constructor(
     ): ArrayList<RateModel> {
         for (i in 1 until currentList.size) {
             val currencyCode = currentList[i].currencyCode()
-            val rate = entities.rates[currencyCode] ?: 0.0
+            val rate = entities.rates[currencyCode] ?: chosenBaseToPreviousBaseRate
             list.add(
                 RateModel(
                     CurrencyWithFlagModel.fromString(
                         currencyCode
-                    ), applyRate(rate)
+                    ),
+                    applyRate(rate)
                 )
             )
         }
@@ -180,15 +180,84 @@ class RatesActivityPresenter @Inject constructor(
     }
 
     private fun handleResponseSuccess(tryValue: Try.Success<ArrayList<RateModel>>) {
-        val rateModels = tryValue.success
-        currentList = rateModels
-        view?.updateRates(ArrayList(currentList))
-        view?.hideProgressBar()
+        synchronized(syncObject) {
+            val rateModels = tryValue.success
+            currentList = rateModels
+            view?.updateRates(ArrayList(currentList))
+            view?.hideProgressBar()
+        }
     }
 
     private fun isBaseCurrency(rateModel: RateModel): Boolean {
         return chosenBase.currencyWithFlagModel == rateModel.currencyWithFlagModel
     }
+
+    private fun recalculateRatesForNewBase(clickedRateModel: RateModel) {
+        currentRatesEntity?.let { currentRatesEntity ->
+            val clickedModelRate = currentRatesEntity.rates[clickedRateModel.currencyCode()]
+            clickedModelRate?.let { clickedRate ->
+                val newBase = clickedRateModel.currencyCode()
+                val ratesHashMap =
+                    recalculateRates(clickedRate, currentRatesEntity, clickedRateModel)
+                this.currentRatesEntity = RatesEntity(newBase, ratesHashMap)
+            }
+        }
+    }
+
+    private fun recalculateRates(
+        clickedRate: Double,
+        currentRatesEntity: RatesEntity,
+        clickedRateModel: RateModel
+    ): HashMap<String, Double> {
+        val ratesHashMap = HashMap<String, Double>()
+        val swapRate = 1 / clickedRate
+        ratesHashMap[chosenBase.currencyCode()] = swapRate
+        for (rate in currentRatesEntity.rates) {
+            if (rate.key != clickedRateModel.currencyCode()) {
+                ratesHashMap[rate.key] = rate.value * swapRate
+            }
+        }
+        return ratesHashMap
+    }
+
+    private fun swapBases(
+        currentList: ArrayList<RateModel>,
+        clickedRateModel: RateModel
+    ) {
+        currentList[0].let { previousBase ->
+            currentList.remove(previousBase)
+            currentList.add(0, previousBase.copy(isBase = false))
+        }
+        for (model in currentList) {
+            if (model.currencyWithFlagModel == clickedRateModel.currencyWithFlagModel) {
+                currentList.remove(model)
+                chosenBase = clickedRateModel.copy(isBase = true)
+                break
+            }
+        }
+        currentList.add(0, chosenBase)
+    }
+
+    private fun prepareChosenToPreviousBaseCurrencyRate(clickedRateModel: RateModel) {
+        currentRatesEntity?.rates?.get(clickedRateModel.currencyCode())?.let { clickedRate ->
+            chosenBaseToPreviousBaseRate = 1 / clickedRate
+        } ?: run {
+            chosenBaseToPreviousBaseRate = 1 / chosenBaseToPreviousBaseRate
+        }
+    }
+
+    private fun recalculateAmounts(): ArrayList<RateModel> {
+        val list = ArrayList<RateModel>()
+
+        list.add(chosenBase)
+        currentRatesEntity?.let { ratesEntity ->
+            currentList?.let { currentModels ->
+                populateExistingList(currentModels, ratesEntity, list)
+            }
+        }
+        return list
+    }
+
 
     private fun showErrorSnackbar(throwable: Throwable) {
         Timber.e(throwable)
@@ -197,5 +266,4 @@ class RatesActivityPresenter @Inject constructor(
             .timer(1, TimeUnit.SECONDS)
             .subscribe { view?.hideErrorSnackbar() }
     }
-
 }
