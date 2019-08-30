@@ -21,6 +21,7 @@ class RateViewHolder(
 
     init {
         presenter.attachView(this)
+        itemView.currencyAmount.filters = arrayOf(DecimalDigitsInputFilter())
     }
 
     override fun populateCurrency(
