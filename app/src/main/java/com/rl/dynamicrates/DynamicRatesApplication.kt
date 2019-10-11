@@ -2,6 +2,7 @@ package com.rl.dynamicrates
 
 import android.app.Activity
 import android.app.Application
+import com.rl.dynamicrates.dagger.AppModule
 import com.rl.dynamicrates.dagger.DaggerAppComponent
 import dagger.android.AndroidInjector
 import dagger.android.DispatchingAndroidInjector
@@ -18,7 +19,9 @@ class DynamicRatesApplication : Application(), HasActivityInjector {
         super.onCreate()
         Timber.plant(Timber.DebugTree())
 
-        DaggerAppComponent.create()
+        DaggerAppComponent.builder()
+            .appModule(AppModule(this))
+            .build()
             .inject(this)
     }
 
